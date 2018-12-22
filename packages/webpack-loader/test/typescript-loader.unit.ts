@@ -83,7 +83,7 @@ describe('webpack loader', function() {
     it('uses source transformed by preceding loaders', async () => {
         const entry = join(fixturesRoot, 'pre-loader', 'error-without-preloader.ts')
         const { stats, statsText } = await bundleWithLoader({
-            entry, preloaders: [{ loader: join(__dirname, 'preloader.ts') }]
+            entry, preloaders: [{ loader: join(fixturesRoot, 'pre-loader', 'preloader.ts') }]
         })
 
         expect(stats.hasErrors(), statsText).to.equal(false)
