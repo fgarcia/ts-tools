@@ -1,5 +1,5 @@
 import { dirname, join, normalize } from 'path'
-import { readdirSync, existsSync, realpathSync } from 'fs'
+import { readdirSync, existsSync } from 'fs'
 import ts from 'typescript'
 import { TypeScriptService, ITranspilationOptions } from '@ts-tools/service'
 import { resolvedModulesTransformer } from '@ts-tools/robotrix'
@@ -127,7 +127,7 @@ export const typescriptLoader: loader.Loader = function(source) {
             join,
             normalize,
             readdirSync,
-            realpathSync,
+            realpathSync: path => this.fs.readlinkSync(path),
             defaultLibsDirectory,
             caseSensitive
         })
