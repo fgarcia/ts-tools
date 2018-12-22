@@ -118,7 +118,8 @@ export const typescriptLoader: loader.Loader = function(source) {
         },
         getCustomFs: () => ({
             readFileSync: (path, encoding = 'utf8') => {
-                const fileContents = loadedSources[path] || this.fs.readFileSync(path) as Buffer
+                const normalizedPath = normalize(path)
+                const fileContents = loadedSources[normalizedPath] || this.fs.readFileSync(normalizedPath) as Buffer
                 return fileContents.toString(encoding)
             },
             statSync: path => this.fs.statSync(path),
