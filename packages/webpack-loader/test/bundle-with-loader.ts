@@ -19,17 +19,28 @@ export interface IBundleWithLoaderOptions {
      * Directory path that serves as bundling base path
      */
     context?: string
+
+    /**
+     * Loaders to apply before the typescript loader.
+     * webpack applies them in reverse order.
+     */
+    preloaders?: webpack.RuleSetLoader[]
 }
 
 // direct path to loader's source
 const loaderPath = require.resolve('../src/index.ts')
 
 export async function bundleWithLoader(
-    { entry, loaderOptions, context }: IBundleWithLoaderOptions
+    { entry, loaderOptions, context, preloaders = [] }: IBundleWithLoaderOptions
 ): Promise<{ stats: webpack.Stats, statsText: string }> {
     // clear loader's cache before bundling.
     // cwd is cached on baseHost, and several tests use same fixture with different cwd
     tsService.runningServices = new Map()
+
+    const typescriptLoader: webpack.RuleSetLoader = {
+        loader: loaderPath,
+        options: { colors: false, ...loaderOptions }
+    }
 
     const compiler = webpack({
         entry,
@@ -40,8 +51,8 @@ export async function bundleWithLoader(
             rules: [
                 {
                     test: /\.tsx?$/,
-                    loader: loaderPath,
-                    options: { colors: false, ...loaderOptions }
+                    // loaders execute in reversed order, so preloaders come last
+                    loaders: [typescriptLoader, ...preloaders]
                 }
             ]
         }

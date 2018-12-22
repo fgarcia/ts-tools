@@ -80,6 +80,16 @@ describe('webpack loader', function() {
         expect(statsText).to.not.contain(`passes-type-check.ts(`)
     })
 
+    it('uses source transformed by preceding loaders', async () => {
+        const entry = join(fixturesRoot, 'pre-loader', 'error-without-preloader.ts')
+        const { stats, statsText } = await bundleWithLoader({
+            entry, preloaders: [{ loader: join(__dirname, 'preloader.ts') }]
+        })
+
+        expect(stats.hasErrors(), statsText).to.equal(false)
+        expect(stats.hasWarnings(), statsText).to.equal(false)
+    })
+
     describe('with warnOnly: true', () => {
         it('exposes syntactic errors as warnings', async () => {
             const entry = join(fixturesRoot, 'errors', 'file-with-syntax-error.ts')

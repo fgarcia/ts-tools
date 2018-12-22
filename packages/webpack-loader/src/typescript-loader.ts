@@ -1,3 +1,5 @@
+import { dirname, join, normalize } from 'path'
+import { readdirSync, existsSync, realpathSync } from 'fs'
 import ts from 'typescript'
 import { TypeScriptService, ITranspilationOptions } from '@ts-tools/service'
 import { resolvedModulesTransformer } from '@ts-tools/robotrix'
@@ -6,6 +8,8 @@ import { getOptions, getRemainingRequest } from 'loader-utils'
 
 const externalSourceMapPrefix = `//# sourceMappingURL=`
 const platformHasColors = !!ts.sys.writeOutputIsTTY && ts.sys.writeOutputIsTTY()
+const caseSensitive = !existsSync(__filename.toUpperCase())
+const defaultLibsDirectory = dirname(ts.getDefaultLibFilePath({}))
 
 /**
  * Loader options which can be provided via webpack configuration
@@ -42,7 +46,9 @@ export interface ITypeScriptLoaderOptions {
 
 export const tsService = new TypeScriptService()
 
-export const typescriptLoader: loader.Loader = function(/* source */) {
+export const loadedSources: { [resourcePath: string]: string | Buffer } = {}
+
+export const typescriptLoader: loader.Loader = function(source) {
     const loaderOptions: ITypeScriptLoaderOptions = {
         colors: platformHasColors,
         warnOnly: false,
@@ -51,6 +57,8 @@ export const typescriptLoader: loader.Loader = function(/* source */) {
     }
     const tsFormatFn = loaderOptions.colors ? ts.formatDiagnosticsWithColorAndContext : ts.formatDiagnostics
     const { resourcePath } = this
+
+    loadedSources[resourcePath] = source
 
     const transpileOptions: ITranspilationOptions = {
         cwd: this.rootContext,
@@ -107,15 +115,23 @@ export const typescriptLoader: loader.Loader = function(/* source */) {
         tsconfigFileName: loaderOptions.tsconfigFileName,
         getCustomTransformers(_baseHost, compilerOptions) {
             return compilerOptions && compilerOptions.baseUrl ? { after: [resolvedModulesTransformer] } : undefined
-        }
+        },
+        getCustomFs: () => ({
+            readFileSync: (path, encoding = 'utf8') => {
+                const fileContents = loadedSources[path] || this.fs.readFileSync(path) as Buffer
+                return fileContents.toString(encoding)
+            },
+            statSync: path => this.fs.statSync(path),
+            dirname,
+            join,
+            normalize,
+            readdirSync,
+            realpathSync,
+            defaultLibsDirectory,
+            caseSensitive
+        })
     }
 
-    // atm, the loader does not use webpack's `inputFileSystem` to create a custom language service
-    // instead, it uses native node APIs (via @ts-tools/service)
-    // so we use the file path directly (resourcePath) instead of the `source` passed to us
-    // this also means we do not support other loaders before us
-    // not ideal, but works for most use cases
-    // will be changed in near future
     const { diagnostics, outputText, sourceMapText, baseHost, resolvedModules } = tsService.transpileFile(
         resourcePath,
         transpileOptions
@@ -142,7 +158,7 @@ export const typescriptLoader: loader.Loader = function(/* source */) {
     }
 
     if (sourceMapText) {
-        const rawSourceMap = JSON.parse(sourceMapText) as import ('source-map').RawSourceMap
+        const rawSourceMap = JSON.parse(sourceMapText) as import('source-map').RawSourceMap
         if (rawSourceMap.sources.length === 1) {
             rawSourceMap.sources[0] = getRemainingRequest(this)
         }

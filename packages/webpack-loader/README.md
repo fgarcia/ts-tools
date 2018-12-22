@@ -86,7 +86,6 @@ exports.module = {
 
 ## Known limitations
 
-- Using loaders before this loader is not supported, as it reads sources directly from the file system.
 - The following `compilerOptions` are not supported:
   - `allowJs` and `checkJs` (might work, but untested).
   - `composite` projects.
