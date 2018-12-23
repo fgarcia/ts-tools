@@ -1,14 +1,13 @@
 import { dirname, join, normalize } from 'path'
-import { readdirSync, existsSync } from 'fs'
 import ts from 'typescript'
 import { TypeScriptService, ITranspilationOptions } from '@ts-tools/service'
 import { resolvedModulesTransformer } from '@ts-tools/robotrix'
 import { loader } from 'webpack'
 import { getOptions, getRemainingRequest } from 'loader-utils'
 
+const { sys } = ts
 const externalSourceMapPrefix = `//# sourceMappingURL=`
-const platformHasColors = !!ts.sys.writeOutputIsTTY && ts.sys.writeOutputIsTTY()
-const caseSensitive = !existsSync(__filename.toUpperCase())
+const platformHasColors = !!sys && !!sys.writeOutputIsTTY && sys.writeOutputIsTTY()
 const defaultLibsDirectory = dirname(ts.getDefaultLibFilePath({}))
 
 /**
@@ -126,10 +125,10 @@ export const typescriptLoader: loader.Loader = function(source) {
             dirname,
             join,
             normalize,
-            readdirSync,
+            readdirSync: path => this.fs.readdirSync(path),
             realpathSync: path => this.fs.readlinkSync(path),
             defaultLibsDirectory,
-            caseSensitive
+            caseSensitive: !!sys && sys.useCaseSensitiveFileNames || false
         })
     }
 
